@@ -4,7 +4,7 @@ desc: "用 IndexTTS 克隆音色说话：自动拉起 TTS 服务、长文本分�
 help: "指令：/说话 内容、/音色 <wav路径>、/语音状态；也可以直接说「用语音说你好」"
 version: 1.1.0
 author: "部署助手"
-repo: ""
+repo: "https://github.com/nidie110/astrbot_plugin_feiyu_voice"
 astrbot_version: ">=4.11.0"
 tags:
   - 语音

@@ -1,0 +1,125 @@
+{
+  "_sec_core": {
+    "description": "=== 语音 ===",
+    "type": "text",
+    "invisible": true
+  },
+  "index_tts_url": {
+    "description": "IndexTTS WebUI 地址",
+    "type": "string",
+    "default": "http://127.0.0.1:7860/",
+    "hint": "插件通过 gradio_client 连这个地址合成语音。"
+  },
+  "reference_audio": {
+    "description": "默认参考音色 wav",
+    "type": "string",
+    "default": "",
+    "hint": "留空则只能靠 /音色 让每个用户上传自己的音色。"
+  },
+  "max_chars": {
+    "description": "单次合成最大字数",
+    "type": "int",
+    "default": 200,
+    "slider": {
+      "min": 20,
+      "max": 1000,
+      "step": 10
+    }
+  },
+  "segment_max_chars": {
+    "description": "分段长度",
+    "type": "int",
+    "default": 40,
+    "slider": {
+      "min": 10,
+      "max": 200,
+      "step": 5
+    },
+    "hint": "长文本按句切成多段再拼起来，段越短越稳。"
+  },
+  "segment_pause_ms": {
+    "description": "段间停顿（毫秒）",
+    "type": "int",
+    "default": 140,
+    "slider": {
+      "min": 0,
+      "max": 1000,
+      "step": 20
+    }
+  },
+  "_sec_switch": {
+    "description": "=== 触发方式 ===",
+    "type": "text",
+    "invisible": true
+  },
+  "replace_text_with_voice": {
+    "description": "文字回复直接换成语音",
+    "type": "bool",
+    "default": true
+  },
+  "keyword_trigger": {
+    "description": "识别「我想听你说话」这类意图",
+    "type": "bool",
+    "default": true
+  },
+  "_sec_service": {
+    "description": "=== 服务自启（全留空 = 不自启） ===",
+    "type": "text",
+    "invisible": true
+  },
+  "service_venv_py": {
+    "description": "IndexTTS 的 python",
+    "type": "string",
+    "default": "",
+    "hint": "例如 D:\\AI\\index-tts\\.venv\\Scripts\\python.exe"
+  },
+  "service_webui": {
+    "description": "webui.py 路径",
+    "type": "string",
+    "default": ""
+  },
+  "service_webui_cwd": {
+    "description": "启动工作目录",
+    "type": "string",
+    "default": "",
+    "hint": "留空用 webui.py 所在目录。"
+  },
+  "service_webui_log": {
+    "description": "自启日志路径",
+    "type": "string",
+    "default": "",
+    "hint": "留空写到工作目录下的 webui.autostart.log。"
+  },
+  "service_shim": {
+    "description": "9880 shim 脚本（可选）",
+    "type": "string",
+    "default": "",
+    "hint": "只有用 AstrBot 原生 OpenAI-TTS provider 时才需要。"
+  },
+  "service_shim_cwd": {
+    "description": "shim 启动目录",
+    "type": "string",
+    "default": ""
+  },
+  "service_shim_log": {
+    "description": "shim 日志路径",
+    "type": "string",
+    "default": ""
+  },
+  "service_shim_port": {
+    "description": "shim 端口",
+    "type": "int",
+    "default": 9880
+  },
+  "service_wait_seconds": {
+    "description": "自启最长等待（秒）",
+    "type": "int",
+    "default": 180,
+    "slider": {
+      "min": 30,
+      "max": 600,
+      "step": 30
+    },
+    "hint": "模型加载慢的机器调大。"
+  }
+}

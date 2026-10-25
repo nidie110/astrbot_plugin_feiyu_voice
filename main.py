@@ -10,6 +10,12 @@ import time
 import uuid
 from pathlib import Path
 
+import sys as _sys
+
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+_sys.modules.pop("_feiyu_kit", None)  # 顶层模块名，重载插件时先清缓存再导，避免用到旧字节
+import _feiyu_kit as kit  # noqa: E402
+
 import astrbot.api.message_components as Comp
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
@@ -47,14 +53,7 @@ CREATE_NO_WINDOW = 0x08000000
 
 
 def _port_open(port: int, host: str = "127.0.0.1") -> bool:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(0.4)
-    try:
-        return s.connect_ex((host, port)) == 0
-    except Exception:
-        return False
-    finally:
-        s.close()
+    return kit.port_open(port, host)
 
 
 def _spawn(cmd, cwd, log_path) -> None:
@@ -90,17 +89,9 @@ class FeiyuVoice(Star):
     # ---------- 配置 ----------
 
     def _load_cfg(self) -> dict:
-        cfg = dict(DEFAULT_CONFIG)
-        if self.cfg_path.exists():
-            try:
-                cfg.update(json.loads(self.cfg_path.read_text(encoding="utf-8")))
-            except Exception as e:
-                logger.warning(f"[feiyu_voice] 配置读取失败: {e}")
-        else:
-            self.cfg_path.write_text(json.dumps(DEFAULT_CONFIG, ensure_ascii=False, indent=2), encoding="utf-8")
-        if self.plugin_cfg:
-            # 插件配置（_conf_schema.json）优先于本地 config.json，空值不覆盖
-            cfg.update({k: v for k, v in self.plugin_cfg.items() if v not in (None, "")})
+        cfg = kit.merge_config(DEFAULT_CONFIG, self.plugin_cfg, self.cfg_path)
+        if not self.cfg_path.exists():
+            kit.save_json(self.cfg_path, DEFAULT_CONFIG, keep=0)
         return cfg
 
     # ---------- 文本切分 ----------
@@ -177,12 +168,7 @@ class FeiyuVoice(Star):
         return False
 
     def _wait_port(self, port: int, wait: float) -> bool:
-        deadline = time.time() + wait
-        while time.time() < deadline:
-            if _port_open(port):
-                return True
-            time.sleep(2)
-        return False
+        return kit.wait_port(port, wait)
 
     def _touch_shim(self) -> None:
         """7860 起来后顺带保证 9880 shim 也在（AstrBot 原生 TTS provider 用它）。"""

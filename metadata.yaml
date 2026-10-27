@@ -2,7 +2,7 @@ name: astrbot_plugin_feiyu_voice
 display_name: "大肥鱼·说话"
 desc: "用 IndexTTS 克隆音色说话：自动拉起 TTS 服务、长文本分段合成、支持每人群音色"
 help: "指令：/说话 内容、/音色 <wav路径>、/语音状态；也可以直接说「用语音说你好」"
-version: 1.1.2
+version: 1.1.4
 author: "部署助手"
 repo: "https://github.com/nidie110/astrbot_plugin_feiyu_voice"
 astrbot_version: ">=4.11.0"

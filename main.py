@@ -13,10 +13,21 @@ from pathlib import Path
 import sys as _sys
 
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
-_sys.modules.pop("_feiyu_kit", None)  # 顶层模块名，重载插件时先清缓存再导，避免用到旧字节
-import _feiyu_kit as kit  # noqa: E402
+_KIT_PATH = Path(__file__).resolve().parent / "_feiyu_kit.py"
+kit = _sys.modules.get("_feiyu_kit")
+if kit is None:
+    # 全进程只有一份 kit：动作注册表必须共享，所以谁先加载谁就是那份，后来者直接复用。
+    # 磁盘上的 kit 改动要重启整个 AstrBot 进程才生效（面板重载插件不会换掉已经加载的模块）。
+    import importlib.util as _ilu  # noqa: PLC0415
+
+    _spec = _ilu.spec_from_file_location("_feiyu_kit", _KIT_PATH)
+    _fresh = _ilu.module_from_spec(_spec)
+    _sys.modules["_feiyu_kit"] = _fresh
+    _spec.loader.exec_module(_fresh)
+    kit = _fresh
 
 import astrbot.api.message_components as Comp
+from astrbot.api.event import MessageChain
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
@@ -78,6 +89,8 @@ class FeiyuVoice(Star):
 
     def __init__(self, context: Context, config: dict | None = None):
         super().__init__(context)
+        kit.register_capability("feiyu_voice", "能用自己的声音发语音", "all")
+        kit.register_action("说", self.speak_text_aloud, "用她自己的声音把 text 念出来发成语音")
         self.plugin_cfg = dict(config or {})
         self.data_dir = Path("data/plugin_data") / PLUGIN_NAME
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -323,7 +336,7 @@ class FeiyuVoice(Star):
         # 2) 泛化说法：标记本轮，等她回复出来后转语音
         if not self.cfg.get("keyword_trigger", True):
             return
-        broad = event.is_private_chat() or event.is_admin()
+        broad = event.is_private_chat() or kit.is_owner(event, self.cfg)
         hit = bool(self.VOICE_INTENT.search(text))
         if not broad and not re.search(r"(语音|声音|念|读)", text):
             hit = False
@@ -378,8 +391,7 @@ class FeiyuVoice(Star):
 
     # ---------- LLM 工具 ----------
 
-    @filter.llm_tool(name="speak_text_aloud")
-    async def speak_text_aloud(self, event: AstrMessageEvent, text: str):
+    async def speak_text_aloud(self, event: AstrMessageEvent, text: str) -> str:
         """用你自己的声音把一段话念出来，发成语音消息。
 
         什么时候调用：
@@ -395,28 +407,27 @@ class FeiyuVoice(Star):
         """
         text = (text or "").strip()
         if not text:
-            yield event.plain_result("要念什么？")
-            return
+            return "要念什么？给我内容。"
 
         # 工具已经发声，就不要再让 hook 重复发一遍
         self._pending[event.unified_msg_origin] = 0
 
         ref = self._ref_audio(event)
         if not ref:
-            yield event.plain_result("没有参考音频，先把音色设好")
-            return
+            return "没有参考音频，音色还没设好，念不了。先用 /音色 设一个。"
 
         try:
             path = await asyncio.to_thread(self._synthesize, text, ref)
         except Exception as e:
             logger.error(f"[feiyu_voice] 生成失败: {e}")
-            yield event.plain_result(f"语音没生成出来：{type(e).__name__}")
-            return
+            return f"语音没生成出来（{type(e).__name__}）。"
 
-        yield event.chain_result([Comp.Record(file=path, url=path)])
-
-    # ---------- 指令 ----------
-
+        try:
+            await event.send(MessageChain([Comp.Record(file=path, url=path)]))
+        except Exception as e:
+            logger.error(f"[feiyu_voice] 语音发送失败: {e}")
+            return f"语音生成好了但没发出去（{type(e).__name__}）。"
+        return "语音已经发出去了。"
     @filter.command("说话")
     async def cmd_say(self, event: AstrMessageEvent):
         """让她念一句：/说话 你好呀"""
